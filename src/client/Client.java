@@ -14,8 +14,8 @@ import java.net.Socket;
 
 public class Client extends JPanel implements Runnable
 {
-    public static final int WIDTH = 500;
-    public static final int HEIGHT = 500;
+    public static final int WIDTH = 550;
+    public static final int HEIGHT = 550;
 
     private Thread thread;
 
@@ -32,13 +32,14 @@ public class Client extends JPanel implements Runnable
 
     //Message
     private String message;
-    private String lastMessage;
+    private final Messages messages;
 
     //Connessione
     private Socket client;
     private final ObjectOutputStream out;
     private final ObjectInputStream in;
     private final Players players;
+
 
     public Client()
     {
@@ -51,15 +52,13 @@ public class Client extends JPanel implements Runnable
 
         currentFPS = 0;
 
-        player = new Player(JOptionPane.showInputDialog(null, "Inserisci il nome", "Inserisci", JOptionPane.QUESTION_MESSAGE));
         players = new Players();
-
-        this.setName(player.getName());
+        messages = new Messages(10);
 
         this.ui = null;
         this.scene = SCENE_GAME;
 
-        this.message = this.lastMessage = "";
+        this.message = "";
 
         try
         {
@@ -72,14 +71,45 @@ public class Client extends JPanel implements Runnable
             {
                 this.players.add(line);
             }
-
-            sendObject(new Player(this.player));
         }
         catch (IOException | ClassNotFoundException e)
         {
             throw new RuntimeException(e);
         }
 
+        boolean nomeOk = false;
+        String nomePlayer;
+        do
+        {
+            nomePlayer = JOptionPane.showInputDialog(null, "Inserisci il nome", "Inserisci", JOptionPane.QUESTION_MESSAGE);
+
+            if (nomePlayer != null)
+            {
+                if (this.players.contains(new Player(nomePlayer)) == -1)
+                {
+                    nomeOk = true;
+                }
+            }
+
+            if (!nomeOk)
+            {
+                Object[] options = {"OK"};
+                JOptionPane.showOptionDialog(null,
+                        "Nome non valido","Attenzione",
+                        JOptionPane.DEFAULT_OPTION,
+                        JOptionPane.ERROR_MESSAGE,
+                        null,
+                        options,
+                        options[0]);
+            }
+
+        }
+        while (!nomeOk);
+
+        player = new Player(nomePlayer);
+        this.setName(player.getName());
+
+        sendObject(new Player(this.player));
 
         Thread receiverThread = new Thread(new Receiver());
         receiverThread.start();
@@ -101,25 +131,41 @@ public class Client extends JPanel implements Runnable
         //Movement Player
 
         boolean move = false;
+        int playerSpeed = player.getSpeed();
         if (keyboard.upPressed)
         {
-            player.setPosY(player.getPosY() - 5);
-            move = true;
+            if (player.getPosY() > playerSpeed)
+            {
+                player.setPosY(player.getPosY() - playerSpeed);
+                move = true;
+            }
         }
         if (keyboard.leftPressed)
         {
-            player.setPosX(player.getPosX() - 5);
-            move = true;
+            if (player.getPosX() > 5)
+            {
+                player.setPosX(player.getPosX() - playerSpeed);
+                move = true;
+            }
+
         }
         if (keyboard.downPressed)
         {
-            player.setPosY(player.getPosY() + 5);
-            move = true;
+            if (player.getPosY() < HEIGHT - playerSpeed - player.getBoxSize())
+            {
+                player.setPosY(player.getPosY() + playerSpeed);
+                move = true;
+            }
+
         }
         if (keyboard.rightPressed)
         {
-            player.setPosX(player.getPosX() + 5);
-            move = true;
+            if (player.getPosX() < WIDTH - playerSpeed - player.getBoxSize())
+            {
+                player.setPosX(player.getPosX() + playerSpeed);
+                move = true;
+            }
+
         }
 
         if (move)
@@ -133,7 +179,7 @@ public class Client extends JPanel implements Runnable
             {
                 Message messageSend = new Message(this.player.getName(), this.message);
                 sendObject(messageSend);
-                lastMessage = "You: " + this.message;
+                this.messages.add(messageSend);
                 message = "";
             }
 
@@ -166,20 +212,37 @@ public class Client extends JPanel implements Runnable
             g2D.fill(this.player.getRect());
 
             g2D.setColor(Color.black);
-            g2D.drawString("YOU (" + player.getName() + ")", player.getPosX(), player.getPosY());
+            ui.drawString(UI.BLACK_BOLD + "YOU" + UI.RESET + "(" + player.getName() + ")", player.getPosX(), player.getPosY());
 
+            //Draw message
             ui.setFontSize(15f);
-            g2D.drawString("Last Message:", 10, 20);
-            g2D.drawString(lastMessage, 10, 45);
+            g2D.setColor(Color.black);
+            int y = 20;
+            for (Message message : this.messages.getList())
+            {
+                if (message.getName().equals(player.getName()))
+                {
+                    ui.setFontSize(Font.BOLD);
+                    ui.drawString("You: " + UI.BLACK_ITALIC + message.getMessage(), 10, y);
+                }
+                else
+                {
+                    ui.setFontSize(Font.PLAIN);
+                    g2D.setColor(Color.black);
+                    ui.drawString(message.getName() + ": " + UI.GREEN_ITALIC + message.getMessage(), 10, y);
+                }
+
+                y += 15;
+            }
 
             if (scene == SCENE_MESSSAGE)
             {
                 g2D.setFont(new Font("Consolas",  Font.PLAIN, 15));
                 g2D.setColor(Color.black);
-                ui.drawDarkened(new Rectangle(0, 500 - 30, 500, 30), 0.4f);
+                ui.drawDarkened(new Rectangle(0, HEIGHT - 30, WIDTH, 30), 0.4f);
 
                 ui.setFontSize(Font.PLAIN, 15f);
-                g2D.drawString("Message: " + message, 10, 500 - 10);
+                ui.drawString(UI.BLACK_BOLD + "Message: " + UI.RESET + message, 10, HEIGHT - 10);
             }
 
         }
@@ -264,8 +327,6 @@ public class Client extends JPanel implements Runnable
                 {
                     if (input instanceof Player player1)
                     {
-                        System.out.println(player1);
-
                         if (!players.set(player1))
                         {
                             players.add(player1);
@@ -274,7 +335,7 @@ public class Client extends JPanel implements Runnable
                     }
                     else if (input instanceof Message message1)
                     {
-                        lastMessage = message1.getName() + ": " + message1.getMessage();
+                        messages.add(message1);
                     }
 
 

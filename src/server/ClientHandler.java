@@ -5,6 +5,8 @@ import entity.Player;
 
 import java.io.*;
 import java.net.Socket;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 
 public class ClientHandler extends Thread
 {
@@ -74,12 +76,12 @@ public class ClientHandler extends Thread
 
                     if (player1.getPosX() == -1 && player1.getPosY() == -1)
                     {
+                        System.out.println(getTime() + "\033[0;31mPlayer '" + player1.getName() + "' it disconnected.\033[0m");
                         stop = true;
                     }
 
                     this.player = new Player(player1);
 
-                    System.out.println(player1);
                     broadcast(player1);
 
                     if (stop)
@@ -89,7 +91,7 @@ public class ClientHandler extends Thread
                 }
                 else if (input instanceof Message message)
                 {
-                    System.out.println(message);
+                    System.out.println(getTime() + "\033[0;32m" + message.getName() + "\033[0m: " + message.getMessage() );
                     broadcast(message);
                 }
 
@@ -123,7 +125,10 @@ public class ClientHandler extends Thread
         }
     }
 
-
+    private String getTime()
+    {
+        return "[\033[0;34m" + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + "\033[0m] > ";
+    }
 
 
 }

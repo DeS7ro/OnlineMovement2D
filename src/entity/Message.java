@@ -10,20 +10,12 @@ public class Message implements Serializable
     public Message(String name, String message)
     {
         this.name = name;
-        this.message = message;
+        this.message = message.split("\n")[0];
     }
 
     public Message(Message message)
     {
-        if (message != null)
-        {
-            this.name = message.name;
-            this.message = message.message;
-            return;
-        }
-
-        this.name = null;
-        this.message = null;
+        this(message.name, message.message);
     }
 
     public String getName()

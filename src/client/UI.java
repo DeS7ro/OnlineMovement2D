@@ -1,18 +1,40 @@
 package client;
 
 import java.awt.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 public record UI(Graphics2D g2D)
 {
-    private static final String DELIMITER = "#";
-    public static final String WHITE = DELIMITER + "%255,255,255" + DELIMITER;
-    public static final String BLACK = DELIMITER + "%0,0,0" + DELIMITER;
-    public static final String RED = DELIMITER + "%255,0,0" + DELIMITER;
-    public static final String BLUE = DELIMITER + "%0,0,255" + DELIMITER;
-    public static final String GREEN = DELIMITER + "%0,255,0" + DELIMITER;
-    public static final String BOLD = DELIMITER + "%bold" + DELIMITER;
-    public static final String PLAIN = DELIMITER + "%plain" + DELIMITER;
+    public static final String BLACK = "\033[0;30m";   // BLACK
+    public static final String RED = "\033[0;31m";     // RED
+    public static final String GREEN = "\033[0;32m";   // GREEN
+    public static final String YELLOW = "\033[0;33m";  // YELLOW
+    public static final String BLUE = "\033[0;34m";    // BLUE
+    public static final String PURPLE = "\033[0;35m";  // PURPLE
+    public static final String CYAN = "\033[0;36m";    // CYAN
+    public static final String WHITE = "\033[0;37m";   // WHITE
+
+    public static final String BLACK_BOLD = "\033[1;30m";  // BLACK
+    public static final String RED_BOLD = "\033[1;31m";    // RED
+    public static final String GREEN_BOLD = "\033[1;32m";  // GREEN
+    public static final String YELLOW_BOLD = "\033[1;33m"; // YELLOW
+    public static final String BLUE_BOLD = "\033[1;34m";   // BLUE
+    public static final String PURPLE_BOLD = "\033[1;35m"; // PURPLE
+    public static final String CYAN_BOLD = "\033[1;36m";   // CYAN
+    public static final String WHITE_BOLD = "\033[1;37m";  // WHITE
+
+    public static final String BLACK_ITALIC = "\033[2;30m";  // BLACK
+    public static final String RED_ITALIC = "\033[2;31m";    // RED
+    public static final String GREEN_ITALIC = "\033[2;32m";  // GREEN
+    public static final String YELLOW_ITALIC = "\033[2;33m"; // YELLOW
+    public static final String BLUE_ITALIC = "\033[2;34m";   // BLUE
+    public static final String PURPLE_ITALIC = "\033[2;35m"; // PURPLE
+    public static final String CYAN_ITALIC = "\033[2;36m";   // CYAN
+    public static final String WHITE_ITALIC = "\033[2;37m";  // WHITE
+
+    public static final String RESET = "\033[0m";  // Text Reset
 
     public UI(Graphics2D g2D)
     {
@@ -52,53 +74,61 @@ public record UI(Graphics2D g2D)
         g2D.setFont(g2D.getFont().deriveFont(size));
     }
 
-    public void drawString(String string, int x, int y)
+    public void drawString(String text, int x, int y)
     {
-        if (!string.contains(DELIMITER + "%"))
+        Map<String, Color> ANSI_COLOR_MAP = new HashMap<>();
+        Map<String, Integer> ANSI_STYLE_MAP = new HashMap<>();
+
+        ANSI_COLOR_MAP.put("30", Color.BLACK);
+        ANSI_COLOR_MAP.put("31", Color.RED);
+        ANSI_COLOR_MAP.put("32", new Color(55, 200, 15));
+        ANSI_COLOR_MAP.put("33", Color.YELLOW);
+        ANSI_COLOR_MAP.put("34", Color.BLUE);
+        ANSI_COLOR_MAP.put("35", new Color(128, 0, 128)); // Purple
+        ANSI_COLOR_MAP.put("36", Color.CYAN);
+        ANSI_COLOR_MAP.put("37", Color.WHITE);
+
+        ANSI_STYLE_MAP.put("0", Font.PLAIN);
+        ANSI_STYLE_MAP.put("1", Font.BOLD);
+        ANSI_STYLE_MAP.put("2", Font.ITALIC);
+
+        for (int i = 0; i < text.length(); i++)
         {
-            g2D.drawString(string, x, y);
-            return;
-        }
-
-        FontMetrics fontMetrics = g2D().getFontMetrics();
-        StringTokenizer st = new StringTokenizer(string, "#");
-
-
-        for (int i = 0; i < st.countTokens(); i++)
-        {
-            String next = st.nextToken();
-            if (next.contains("%"))
-            {
-                String[] split = next.split("%");
-
-                if (split[1].contains(","))
+            char c = text.charAt(i);
+            if (c == '\033')
+            { // Check for ANSI escape sequence
+                int endIndex = text.indexOf('m', i);
+                int startIndex = text.indexOf(';', i);
+                if (endIndex != -1)
                 {
-                    //TODO: COLORE
-                }
-                else
-                {
-                    if (split[1].equals("bold"))
+                    if (startIndex != -1)
                     {
-                        setFontSize(Font.BOLD);
+                        String colorCode = text.substring(startIndex+1, endIndex);
+                        if (ANSI_COLOR_MAP.containsKey(colorCode)) {
+                            g2D.setColor(ANSI_COLOR_MAP.get(colorCode));
+                        }
+
+                        String styleCode = text.substring(startIndex - 1, startIndex);
+                        if (ANSI_STYLE_MAP.containsKey(styleCode)) {
+                            setFontSize(ANSI_STYLE_MAP.get(styleCode));
+                        }
+
                     }
-                    else if (split[1].equals("plain"))
+                    else
                     {
+                        g2D.setColor(Color.BLACK); // Reset color to black
                         setFontSize(Font.PLAIN);
                     }
 
+                    i = endIndex; // Skip the ANSI escape sequence
+
                 }
-
-                g2D.drawString(next, x, y);
-                x += fontMetrics.stringWidth(next);
-
             }
             else
             {
-                g2D.drawString(next, x, y);
-                x += fontMetrics.stringWidth(next);
+                g2D.drawChars(new char[]{c}, 0, 1, x, y);
+                x += g2D.getFontMetrics().charWidth(c);
             }
         }
-
-
     }
 }

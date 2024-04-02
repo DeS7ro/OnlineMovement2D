@@ -9,18 +9,21 @@ public class Player implements Serializable
     private final String name;
 
     private int posX, posY;
+    private int speed;
+    private final int boxSize;
 
     public Player(String name)
     {
         this.name = name;
         this.posX = this.posY = 0;
+        this.speed = 5;
+        this.boxSize = 20;
     }
 
     public Player(Player player)
     {
-        this.name = player.name;
-        this.posX = player.posX;
-        this.posY = player.posY;
+        this(player.name);
+        setCoordinates(player.posX, player.posY);
     }
 
     public String getName()
@@ -56,7 +59,22 @@ public class Player implements Serializable
 
     public Rectangle getRect()
     {
-        return new Rectangle(posX, posY, 20, 20);
+        return new Rectangle(posX, posY, boxSize, boxSize);
+    }
+
+    public int getSpeed()
+    {
+        return speed;
+    }
+
+    public void setSpeed(int speed)
+    {
+        this.speed = speed;
+    }
+
+    public int getBoxSize()
+    {
+        return boxSize;
     }
 
     @Override
