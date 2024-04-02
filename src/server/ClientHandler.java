@@ -1,5 +1,6 @@
 package server;
 
+import entity.Message;
 import entity.Player;
 
 import java.io.*;
@@ -64,22 +65,35 @@ public class ClientHandler extends Thread
             boolean stop = false;
             while (!stop)
             {
-                Player input = (Player) in.readObject();
+                Object input = in.readObject();
+                Player player1;
 
-                if (input.getPosX() == -1 && input.getPosY() == -1)
+                if (input instanceof Player)
                 {
-                    stop = true;
+                    player1 = (Player) input;
+
+                    if (player1.getPosX() == -1 && player1.getPosY() == -1)
+                    {
+                        stop = true;
+                    }
+
+                    this.player = new Player(player1);
+
+                    System.out.println(player1);
+                    broadcast(player1);
+
+                    if (stop)
+                    {
+                        server.removeHandler(this);
+                    }
+                }
+                else if (input instanceof Message message)
+                {
+                    System.out.println(message);
+                    broadcast(message);
                 }
 
-                this.player = new Player(input);
 
-                System.out.println(input);
-                broadcast(input);
-
-                if (stop)
-                {
-                    server.removeHandler(this);
-                }
             }
         }
         catch (IOException | ClassNotFoundException e)
@@ -90,7 +104,7 @@ public class ClientHandler extends Thread
 
     }
 
-    private void broadcast(Player player)
+    private void broadcast(Object obj)
     {
         for (ClientHandler client : this.server.getClients())
         {
@@ -98,7 +112,7 @@ public class ClientHandler extends Thread
             {
                 try
                 {
-                    client.out.writeObject(new Player(player));
+                    client.out.writeObject(obj);
                 }
                 catch (IOException e)
                 {
